@@ -1,4 +1,4 @@
-![ZWU_AUTO_Book_NEXT_logo](image/readme/ZWU_AUTO_Book_NEXT_logo.png)
+![ZWU_AUTO_BOOK_NEXT_logo](image/readme/ZWU_AUTO_BOOK_NEXT_logo.png)
 
 # ZWU AUTO BOOK NEXT浙江万里学院图书馆自动预约脚本
 
@@ -217,9 +217,9 @@ ZWU图书馆助手
 ```
 ZWU图书馆助手
 
-- 用户: 2023014380
+- 用户: 你的学号
 - 状态: ❌ 预约失败
-- 原因: 请求太频繁了，请稍后再试
+- 原因: 已有预约，请勿重复预约！
 ```
 
 ### 邮件通知（未测试）
@@ -249,8 +249,8 @@ smtp:
 ### 安装
 
 ```bash
-git clone https://github.com/yunshujing/ZWU_AUTO_Book_NEXT.git
-cd ZWU_AUTO_Book_NEXT
+git clone https://github.com/yunshujing/ZWU_AUTO_BOOK_NEXT.git
+cd ZWU_AUTO_BOOK_NEXT
 pip install -r requirements.txt
 ```
 
@@ -296,7 +296,7 @@ python update_driver.py
 ## 📁 文件结构
 
 ```
-ZWU_AUTO_Book_NEXT/
+ZWU_AUTO_BOOK_NEXT/
 ├── demo.py                          # 入口文件
 ├── zwulib.py                        # 核心库（登录/搜座/抢座）
 ├── notice.py                        # 通知模块（Server酱 + 邮件）
