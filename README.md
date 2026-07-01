@@ -99,7 +99,7 @@
 > [!TIP]
 > 每个账号可单独覆盖 `room_id`、`begin`、`duration`、`seat_ids` 等参数，未填写的使用 `booking_config.yml` 默认值。全部可覆盖字段见 `config/accounts_config.example.json`。
 
-![secrets](image/README/secrets.png)
+![1782878735782](image/README/1782878735782.png)
 
 ### 3. 配置预约参数
 
