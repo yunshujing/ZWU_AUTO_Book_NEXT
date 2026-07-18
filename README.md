@@ -101,6 +101,73 @@
 
 ![secrets](image/readme/secrets.png)
 
+---
+
+#### 💡 推荐用法：配置分层（Variable + Secret）
+
+> 上面的 `ACCOUNTS` 单 Secret 方式把**账号、密码、时段全塞在一个字符串里**，每次改座位或时段都要把全部账号（含密码）重新填一遍。**配置分层**把常改的和敏感的分开存放，90% 的日常操作不用再碰 Secret。
+
+**核心思路：按修改频率和敏感程度分层**
+
+| 层 | 存什么 | 存哪 | 改动频率 |
+|----|--------|------|---------|
+| 账号清单 + 覆盖配置 | 学号、座位、时段、启用状态 | GitHub **Variable** `ACCOUNTS_CONFIG`（明文，UI 可见可改） | 中 |
+| 密码映射 | `{学号: 密码}` JSON | GitHub **Secret** `PASSWORDS`（加密） | 极低 |
+
+> [!NOTE]
+> **隐私说明**：GitHub Variable 和 Secret 一样，**fork 你仓库的人看不到**。fork 不会复制 variables/secrets。区别仅在于：对你自己，Variable 在 UI 明文显示（方便改），Secret 永远是 `***`。学号等半敏感信息放 Variable 是安全的。
+
+**配置步骤：**
+
+1. 进入仓库 **Settings** → **Secrets and variables** → **Actions** → **Variables** 标签 → **New repository variable**
+   - Name: `ACCOUNTS_CONFIG`
+   - Value: 账号清单 JSON（**不含密码**），格式见 `config/accounts.example.json`：
+
+   ```json
+   [
+       {"username": "学号1"},
+       {"username": "学号2", "room_id": 4, "begin": 21, "duration": 9, "seat_ids": [12920, 12921]},
+       {"username": "学号3", "enabled": false, "room_id": 2, "begin": 12}
+   ]
+   ```
+
+2. 进入 **Secrets** 标签 → **New repository secret**
+   - Name: `PASSWORDS`
+   - Value: 密码映射 JSON
+
+   ```json
+   {"学号1": "密码1", "学号2": "密码2", "学号3": "密码3"}
+   ```
+
+3. 如果之前配置过老的 `ACCOUNTS` Secret，**请删除它**（不删的话老配置会优先生效，新配置不生效）。
+
+**`ACCOUNTS_CONFIG` 可用字段：**
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `username` | str | （必填） | 学号 |
+| `enabled` | bool | true | `false` 表示临时停用该账号，不执行预约，保留配置方便恢复 |
+| `room_id` | int | 2 | 自习室编号（0-8） |
+| `dday` | int | 2 | 延后天数（1=明天，2=后天） |
+| `begin` | int | 12 | 开始时间（8=8:00，21=21:00） |
+| `duration` | int | 9 | 持续时长（小时） |
+| `seat_ids` | list | [12920, 12921] | 指定座位 ID，null 则随机选 |
+| `max-retry` | int | 20 | 最大重试次数 |
+
+> 未填写的字段使用 `config/booking_config.yml` 中的默认值。
+
+**日常操作对照：**
+
+| 场景 | 操作 | 碰 Secret 吗？ |
+|------|------|---------------|
+| 加新账号 | 改 `ACCOUNTS_CONFIG` Variable + 在 `PASSWORDS` 加一条 | ✅（只加一条 key） |
+| 改时段 / 座位 / 重试 | 改 `ACCOUNTS_CONFIG` Variable 对应行 | ❌ |
+| 临时停用某账号 | 改 `ACCOUNTS_CONFIG` 里 `enabled: false` | ❌ |
+| 删账号 | 改 `ACCOUNTS_CONFIG`（`PASSWORDS` 可留可删） | ❌ |
+| 改密码 | 改 `PASSWORDS` Secret 对应 key | ✅ |
+
+---
+
 ### 3. 配置预约参数
 
 编辑 `config/booking_config.yml`：

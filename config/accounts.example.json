@@ -1,0 +1,19 @@
+[
+    {
+        "username": "学号1"
+    },
+    {
+        "username": "学号2",
+        "room_id": 4,
+        "begin": 21,
+        "duration": 9,
+        "seat_ids": [12920, 12921],
+        "max-retry": 20
+    },
+    {
+        "username": "学号3",
+        "enabled": false,
+        "room_id": 2,
+        "begin": 12
+    }
+]

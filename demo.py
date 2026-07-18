@@ -29,11 +29,12 @@ DEFAULTS = {
 
 def load_accounts():
     """
-    加载账号列表:
-    1. 本地 config/accounts_config.json（主方式）
-    2. 环境变量 ACCOUNTS（可选 fallback）
+    加载账号列表，优先级:
+    1. 本地 config/accounts_config.json（本地运行主方式）
+    2. 环境变量 ACCOUNTS（老用法后向兼容，单 Secret 存完整 JSON 含密码）
+    3. 环境变量 ACCOUNTS_CONFIG + PASSWORDS（新推荐用法，明文配置 + 密码映射）
     """
-    # 优先从本地文件读取
+    # 1. 本地文件（本地运行主方式，不变）
     if os.path.exists(ACCOUNTS_FILE):
         with open(ACCOUNTS_FILE, 'r', encoding='utf-8') as f:
             cfg = json.load(f)
@@ -41,20 +42,90 @@ def load_accounts():
             return cfg
         return cfg.get('accounts', [])
 
-    # fallback: 环境变量
+    # 2. 老用法：ACCOUNTS 单 Secret（后向兼容，保留）
     accounts_json = os.environ.get('ACCOUNTS', '')
     if accounts_json:
         try:
             data = json.loads(accounts_json)
             if isinstance(data, list):
+                print("提示: 检测到 ACCOUNTS Secret（老用法）。如需切换到新用法，"
+                      "请删除 ACCOUNTS 并改用 ACCOUNTS_CONFIG (Variable) + PASSWORDS (Secret)。")
                 return data
             if isinstance(data, dict) and 'accounts' in data:
+                print("提示: 检测到 ACCOUNTS Secret（老用法）。如需切换到新用法，"
+                      "请删除 ACCOUNTS 并改用 ACCOUNTS_CONFIG (Variable) + PASSWORDS (Secret)。")
                 return data['accounts']
         except json.JSONDecodeError:
             print("警告: ACCOUNTS 环境变量 JSON 解析失败")
 
-    print("错误: 未找到账号配置，请创建 config/accounts_config.json")
+    # 3. 新用法：ACCOUNTS_CONFIG (Variable) + PASSWORDS (Secret)
+    accounts_cfg_str = os.environ.get('ACCOUNTS_CONFIG', '')
+    if accounts_cfg_str:
+        return _load_accounts_split(accounts_cfg_str)
+
+    # 都没命中
+    print("错误: 未找到账号配置。请使用以下任一方式：")
+    print("  1. 本地 config/accounts_config.json")
+    print("  2. GitHub Secret ACCOUNTS（老用法）")
+    print("  3. GitHub Variable ACCOUNTS_CONFIG + Secret PASSWORDS（推荐）")
     return []
+
+
+def _load_accounts_split(accounts_cfg_str):
+    """
+    新用法加载：从 ACCOUNTS_CONFIG (明文) 读账号清单，从 PASSWORDS (Secret) 查密码。
+    返回合并后的账号列表（每个账号含 username + password + 覆盖字段）。
+
+    注意: enabled 停用检查由主循环统一处理，此处不做。
+    """
+    # 解析 ACCOUNTS_CONFIG
+    try:
+        accounts_cfg = json.loads(accounts_cfg_str)
+    except json.JSONDecodeError as e:
+        print(f"错误: ACCOUNTS_CONFIG JSON 解析失败: {e}")
+        return []
+    if isinstance(accounts_cfg, dict) and 'accounts' in accounts_cfg:
+        accounts_cfg = accounts_cfg['accounts']
+    if not isinstance(accounts_cfg, list):
+        print("错误: ACCOUNTS_CONFIG 必须是 JSON 数组，或含 'accounts' 字段的对象")
+        return []
+
+    # 解析 PASSWORDS（fail loud: 设了 ACCOUNTS_CONFIG 却没设 PASSWORDS 是配置错误）
+    passwords_str = os.environ.get('PASSWORDS', '')
+    if not passwords_str:
+        print("错误: 检测到 ACCOUNTS_CONFIG 但未设置 PASSWORDS Secret。"
+              "新用法必须同时配置 PASSWORDS（{学号: 密码} JSON）。")
+        return []
+    try:
+        passwords = json.loads(passwords_str)
+    except json.JSONDecodeError as e:
+        print(f"错误: PASSWORDS JSON 解析失败: {e}")
+        return []
+    if not isinstance(passwords, dict):
+        print("错误: PASSWORDS 必须是 JSON 对象 {学号: 密码}")
+        return []
+
+    # 合并：遍历账号清单，用 username 查密码
+    merged = []
+    for acc in accounts_cfg:
+        username = acc.get('username', '')
+        if not username:
+            print(f"跳过: 账号配置缺少 username 字段: {acc}")
+            continue
+
+        password = passwords.get(username, '')
+        if not password:
+            print(f"跳过: 账号 {username} 在 PASSWORDS 中未找到对应密码")
+            continue
+
+        # 组装完整账号：保留原账号所有字段（含 enabled，由主循环统一处理停用）+ 注入密码
+        merged_acc = dict(acc)
+        merged_acc['password'] = password
+        merged.append(merged_acc)
+
+    if not merged:
+        print("警告: ACCOUNTS_CONFIG 中没有有效账号（全部密码缺失或缺少 username）")
+    return merged
 
 
 def load_booking_config():
@@ -99,9 +170,14 @@ if __name__ == '__main__':
             print(f"跳过第 {i} 个账号: 缺少 username 或 password")
             continue
 
-        # 合并: 账号级覆盖 > 默认配置
+        # 停用开关（所有加载路径统一生效，未配置 enabled 默认为启用）
+        if account.get('enabled', True) is False:
+            print(f"跳过第 {i} 个账号 {username}: 已停用 (enabled=false)")
+            continue
+
+        # 合并: 账号级覆盖 > 默认配置（排除 username/password/enabled 等非预约参数）
         params = {**defaults, **{k: v for k, v in account.items()
-                  if k not in ('username', 'password')}}
+                  if k not in ('username', 'password', 'enabled')}}
 
         print(f"\n{'='*40}")
         print(f"预约第 {i}/{len(accounts)} 个账号: {username}")
