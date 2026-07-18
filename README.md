@@ -70,8 +70,8 @@
 
 | 层                  | 存什么                     | 存哪                                                              | 改动频率 |
 | ------------------- | -------------------------- | ----------------------------------------------------------------- | -------- |
-| 账号清单 + 覆盖配置 | 学号、座位、时段、启用状态 | GitHub**Variable** `ACCOUNTS_CONFIG`（明文，UI 可见可改） | 中       |
-| 密码映射            | `{学号: 密码}` JSON      | GitHub**Secret** `PASSWORDS`（加密）                      | 极低     |
+| 账号清单 + 覆盖配置 | 学号、座位、时段、启用状态 | GitHub **Variable** `ACCOUNTS_CONFIG`（明文，UI 可见可改） | 中       |
+| 密码映射            | `{学号: 密码}` JSON      | GitHub **Secret** `PASSWORDS`（加密）                      | 极低     |
 
 > [!NOTE]
 > **隐私说明**：GitHub Variable 和 Secret 一样，**fork 你仓库的人看不到**。fork 不会复制 variables/secrets。
@@ -159,8 +159,6 @@
 | 删账号               | 改`ACCOUNTS_CONFIG`（`PASSWORDS` 可留可删）          | ❌                 |
 | 改密码               | 改`PASSWORDS` Secret 对应 key                          | ✅                 |
 
----
-
 <details>
 <summary><b>方法二（传统方式）：单 Secret 账号配置</b></summary>
 
@@ -210,6 +208,8 @@
 
 </details>
 
+---
+
 ### 3. 配置预约参数
 
 编辑 `config/booking_config.yml`：
@@ -242,7 +242,6 @@ max-retry: 20          # 最多重试20次
 > * 工作流文件中的 `schedule` 已被注释，仅保留作为语法参考。
 
 ---
-
 
 ### 6. (推荐) 使用 cron-job.org 精确触发定时任务
 
